@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NutriStock - Quản lý kho V17.1 (Advanced Filter)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Nunito', sans-serif; background-color: #FAF5EF; }
+        .fade-in { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .btn-login-highlight { background: linear-gradient(90deg, #4CAF50 0%, #2E7D32 100%); box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4); transition: all 0.3s ease; cursor: pointer; }
+        .btn-login-highlight:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(76, 175, 80, 0.6); filter: brightness(1.1); }
+        .sidebar-item.active { background-color: #E8F5E9; color: #2E7D32; border-right: 4px solid #2E7D32; }
+        .sidebar-item:hover:not(.active) { background-color: #f3f4f6; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.3s ease-in-out; }
+        .btn-primary { @apply bg-green-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-green-700 transition-colors shadow-sm cursor-pointer; }
+        .btn-danger { @apply bg-red-100 text-red-600 px-3 py-1 rounded-lg hover:bg-red-200 transition-colors cursor-pointer; }
+        .input-std { @apply w-full border border-gray-300 p-2 rounded-lg focus:ring-2 focus:ring-green-500 outline-none; }
+        .bg-card-green { background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%); }
+        .bg-card-yellow { background: linear-gradient(135deg, #C0CA33 0%, #AFB42B 100%); }
+        .bg-card-blue { background: linear-gradient(135deg, #42A5F5 0%, #1976D2 100%); }
+        .bg-card-red { background: linear-gradient(135deg, #EF5350 0%, #C62828 100%); }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden text-gray-700 bg-[#FAF5EF]">
+
+    <div id="expiry-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 fade-in">
+        <div class="bg-white w-full max-w-3xl rounded-2xl shadow-2xl p-6 relative">
+            <button onclick="app.closeModal()" class="absolute top-4 right-4 text-gray-400 hover:text-red-500"><i class="fas fa-times text-xl"></i></button>
+            <div class="flex items-center gap-3 mb-6 pb-4 border-b">
+                <div class="bg-red-100 text-red-600 w-10 h-10 rounded-full flex items-center justify-center text-xl"><i class="fas fa-exclamation-triangle"></i></div>
+                <div><h2 class="text-xl font-bold text-gray-800">Cảnh báo Hàng Cận Date (< 10 ngày)</h2><p class="text-xs text-gray-500">Cần xử lý gấp: Thanh lý hoặc Hủy bỏ</p></div>
+            </div>
+            <div class="max-h-96 overflow-y-auto"><table class="w-full text-left text-sm"><thead class="bg-gray-100 text-gray-600"><tr><th class="p-3">Sản phẩm</th><th class="p-3">Hạn sử dụng</th><th class="p-3 text-center">Tồn</th><th class="p-3">Giá nhập</th><th class="p-3 text-right">Hành động</th></tr></thead><tbody id="expiry-list-body"></tbody></table></div>
+        </div>
+    </div>
+
+    <div id="login-screen" class="fixed inset-0 z-50 flex h-screen w-full bg-[#FAF5EF]">
+        <div class="hidden lg:flex w-7/12 relative items-center justify-center overflow-hidden"><img src="https://images.unsplash.com/photo-1600718374662-0483d2b9da44?q=80&w=1974&auto=format&fit=crop" class="absolute inset-0 w-full h-full object-cover"><div class="absolute inset-0 bg-gradient-to-t from-black/50 via-black/20 to-transparent"></div><div class="relative z-10 text-center text-white p-10"><h1 class="text-8xl mb-6 drop-shadow-2xl" style="font-family: 'Pacifico', cursive;">NutriStock</h1><p class="text-3xl font-light tracking-wide border-t border-white/50 pt-6 mt-2 inline-block drop-shadow-lg">Tinh túy từ Thiên Nhiên</p></div></div>
+        <div class="w-full lg:w-5/12 flex items-center justify-center p-8 bg-[#FAF5EF]"><div class="bg-white p-10 rounded-[2rem] shadow-2xl w-full max-w-md fade-in border border-white"><div class="text-center mb-8"><div class="flex items-center justify-center gap-2 mb-6"><span class="text-4xl font-extrabold text-gray-900">Nutri<span class="text-green-600 relative">Stock<i class="fas fa-leaf absolute -top-1 -right-4 text-sm"></i></span></span></div><h2 class="text-3xl font-extrabold text-gray-800 mb-2">Đăng nhập</h2><p class="text-gray-500 text-sm">Vui lòng đăng nhập để quản lý kho hàng.</p></div><div class="space-y-6"><div class="relative"><div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400"><i class="far fa-user"></i></div><input type="text" id="login-user" class="w-full pl-11 pr-4 py-3.5 rounded-full bg-gray-50 border border-gray-200 focus:bg-white focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all" placeholder="Tên đăng nhập"></div><div class="relative"><div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400"><i class="fas fa-lock"></i></div><input type="password" id="login-pass" class="w-full pl-11 pr-4 py-3.5 rounded-full bg-gray-50 border border-gray-200 focus:bg-white focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all" placeholder="Mật khẩu"></div><button onclick="app.login()" class="btn-login-highlight w-full text-white font-bold py-4 rounded-full text-lg uppercase tracking-wide mt-4">Đăng Nhập</button><div class="text-center mt-6 pt-6 border-t border-dashed border-gray-200"><p class="text-xs text-gray-400 mb-2">Tài khoản mẫu:</p><div class="flex justify-center gap-2"><span class="inline-block bg-green-50 text-green-700 px-3 py-1 rounded-full text-xs font-mono font-bold border border-green-100">admin / 123456</span><span class="inline-block bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-mono font-bold border border-blue-100">staff / 123456</span></div></div></div></div></div>
+    </div>
+
+    <div id="main-layout" class="hidden flex h-full w-full">
+        <aside class="w-64 bg-white border-r border-gray-100 flex flex-col justify-between h-full shadow-lg z-10 shrink-0">
+            <div>
+                <div class="p-6 flex items-center justify-center cursor-pointer" onclick="app.nav('dashboard')"><div class="text-3xl font-extrabold flex items-center gap-2"><span class="text-black">Nutri</span><span class="text-green-600 relative">Stock<i class="fas fa-leaf absolute -top-1 -right-4 text-sm"></i></span></div></div>
+                <nav class="mt-4 flex flex-col gap-1 px-2">
+                    <a onclick="app.nav('dashboard')" id="nav-dashboard" class="sidebar-item active cursor-pointer flex items-center gap-3 px-4 py-3 rounded-lg transition-colors font-semibold"><i class="fas fa-chart-pie w-5"></i> Tổng quan</a>
+                    <a onclick="app.nav('approvals')" id="nav-approvals" class="sidebar-item cursor-pointer flex items-center gap-3 px-4 py-3 rounded-lg transition-colors font-semibold admin-only relative"><i class="fas fa-check-double w-5"></i> Duyệt đơn <span id="approval-badge" class="hidden absolute right-4 top-3 bg-red-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">0</span></a>
+                    <a onclick="app.nav('warehouse')" id="nav-warehouse" class="sidebar-item cursor-pointer flex items-center gap-3 px-4 py-3 rounded-lg transition-colors font-semibold"><i class="fas fa-box w-5"></i> Quản lý Kho hàng</a>
+                    <a onclick="app.nav('products')" id="nav-products" class="sidebar-item cursor-pointer flex items-center gap-3 px-4 py-3 rounded-lg transition-colors font-semibold"><i class="fas fa-tags w-5"></i> Danh mục & SP</a>
+                    <a onclick="app.nav('employees')" id="nav-employees" class="sidebar-item cursor-pointer flex items-center gap-3 px-4 py-3 rounded-lg transition-colors font-semibold admin-only"><i class="fas fa-user-friends w-5"></i> Nhân viên</a>
+                    <a onclick="app.nav('suppliers')" id="nav-suppliers" class="sidebar-item cursor-pointer flex items-center gap-3 px-4 py-3 rounded-lg transition-colors font-semibold admin-only"><i class="fas fa-truck w-5"></i> Nhà cung cấp</a>
+                    <a onclick="app.nav('reports')" id="nav-reports" class="sidebar-item cursor-pointer flex items-center gap-3 px-4 py-3 rounded-lg transition-colors font-semibold"><i class="fas fa-file-invoice-dollar w-5"></i> Báo cáo</a>
+                </nav>
+            </div>
+            <div class="p-4 border-t space-y-2"><button onclick="app.resetSample()" class="w-full flex items-center justify-center gap-2 text-blue-600 hover:bg-blue-50 p-2 rounded-lg font-bold text-sm border border-blue-100 transition-colors cursor-pointer admin-only"><i class="fas fa-sync-alt"></i> Nạp Dữ Liệu Mẫu</button><button onclick="app.clearAll()" class="w-full flex items-center justify-center gap-2 text-red-500 hover:bg-red-50 p-2 rounded-lg font-bold text-sm border border-red-100 transition-colors cursor-pointer admin-only"><i class="fas fa-trash"></i> Xóa Trắng Dữ Liệu</button></div>
+        </aside>
+
+        <main class="flex-1 overflow-y-auto bg-nutriBeige p-8 relative" id="app">
+            <header class="flex justify-between items-center mb-8">
+                <h1 id="page-title" class="text-3xl font-bold text-gray-800">Tổng quan</h1>
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-2 cursor-pointer group relative">
+                        <img src="https://ui-avatars.com/api/?name=User&background=0D8ABC&color=fff" class="w-10 h-10 rounded-full border shadow">
+                        <div class="text-sm"><div class="font-bold" id="user-name-display">User</div><div class="text-xs text-green-600" id="user-role-display">Role</div></div>
+                        <div class="absolute right-0 top-12 bg-white shadow-lg rounded-xl p-2 w-40 hidden group-hover:block border border-gray-100"><button onclick="app.logout()" class="w-full text-left px-4 py-2 text-red-500 hover:bg-red-50 rounded-lg text-sm font-bold cursor-pointer"><i class="fas fa-sign-out-alt mr-2"></i>Đăng xuất</button></div>
+                    </div>
+                </div>
+            </header>
+
+            <div id="dashboard" class="tab-content active">
+                <div class="grid grid-cols-4 gap-6 mb-8">
+                    <div class="bg-card-green text-white p-6 rounded-2xl shadow-lg relative overflow-hidden group"><p class="text-xs font-bold opacity-80 uppercase mb-1">Tổng Tồn (Đơn vị lẻ)</p><h3 class="text-3xl font-extrabold mb-4" id="dash-stat-items">0</h3><i class="fas fa-boxes absolute -bottom-4 -right-4 text-8xl text-white opacity-20"></i></div>
+                    <div id="card-money-value" class="bg-card-yellow text-white p-6 rounded-2xl shadow-lg relative overflow-hidden group"><p class="text-xs font-bold opacity-80 uppercase mb-1">Vốn Tồn Kho</p><h3 class="text-3xl font-extrabold mb-4" id="dash-stat-value">0 đ</h3><i class="fas fa-coins absolute -bottom-4 -right-4 text-8xl text-white opacity-20"></i></div>
+                    <div id="card-money-profit" class="bg-card-blue text-white p-6 rounded-2xl shadow-lg relative overflow-hidden group"><p class="text-xs font-bold opacity-80 uppercase mb-1">Lợi nhuận hôm nay</p><h3 class="text-3xl font-extrabold mb-4" id="dash-stat-today">0</h3><i class="fas fa-chart-line absolute -bottom-4 -right-4 text-8xl text-white opacity-20"></i></div>
+                    <div class="bg-card-red text-white p-6 rounded-2xl shadow-lg relative overflow-hidden group hover:scale-105 transition-transform"><p class="text-xs font-bold opacity-80 uppercase mb-1">Cảnh Báo Date (Click)</p><h3 class="text-3xl font-extrabold mb-4" id="dash-stat-alert">0 lô</h3><i class="fas fa-exclamation-triangle absolute -bottom-4 -right-4 text-8xl text-white opacity-20"></i></div>
+                </div>
+                <div class="grid grid-cols-3 gap-6 mb-8">
+                    <div class="col-span-2 bg-white p-6 rounded-2xl shadow-sm"><div class="flex justify-between items-center mb-6"><h3 class="font-bold text-lg text-gray-800">Biểu đồ nhập xuất kho 7 ngày qua</h3><div class="flex gap-4 text-xs font-bold"><span class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-green-500"></span> Nhập kho</span><span class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-yellow-500"></span> Xuất kho</span></div></div><div class="h-64 w-full relative"><canvas id="activityChart"></canvas></div></div>
+                    <div class="col-span-1 flex flex-col gap-6"><div class="bg-white p-6 rounded-2xl shadow-sm border border-green-100 flex-1"><h3 class="font-bold text-lg text-green-800 mb-4 flex items-center gap-2"><i class="fas fa-lightbulb text-yellow-500"></i> Gợi ý Nhập hàng</h3><div id="restock-suggestions" class="max-h-64 overflow-y-auto pr-2 space-y-2"></div></div><div id="staff-requests-card" class="bg-white p-6 rounded-2xl shadow-sm border border-blue-100 hidden"><h3 class="font-bold text-lg text-blue-800 mb-4 flex items-center gap-2"><i class="fas fa-history"></i> Yêu cầu của tôi</h3><table class="w-full text-left"><tbody id="my-requests-body"></tbody></table></div></div>
+                </div>
+            </div>
+
+            <div id="approvals" class="tab-content">
+                <div class="flex justify-between items-center mb-6"><h2 class="text-2xl font-bold text-gray-800">Duyệt Yêu Cầu Nhập/Xuất</h2></div>
+                <div class="bg-white rounded-2xl shadow-sm overflow-hidden"><table class="w-full text-left"><thead class="bg-gray-100 text-gray-600 text-sm"><tr><th class="p-3">Mã YC / Thời gian</th><th class="p-3">Người yêu cầu</th><th class="p-3">Loại</th><th class="p-3">Nội dung chi tiết</th><th class="p-3 text-right">Hành động</th></tr></thead><tbody id="approval-list-body"></tbody></table></div>
+            </div>
+
+            <div id="warehouse" class="tab-content">
+                <div class="grid grid-cols-4 gap-6 mb-8">
+                    <div class="bg-card-green text-white p-6 rounded-2xl shadow-lg relative overflow-hidden group"><p class="text-xs font-bold opacity-80 uppercase mb-1">Tổng Tồn (Đơn vị lẻ)</p><h3 class="text-3xl font-extrabold mb-4" id="wh-stat-items">0</h3><i class="fas fa-boxes absolute -bottom-4 -right-4 text-8xl text-white opacity-20"></i></div>
+                    <div id="wh-stat-value-box" class="bg-card-yellow text-white p-6 rounded-2xl shadow-lg relative overflow-hidden group"><p class="text-xs font-bold opacity-80 uppercase mb-1">Vốn Tồn Kho</p><h3 class="text-3xl font-extrabold mb-4" id="wh-stat-value">0 đ</h3><i class="fas fa-coins absolute -bottom-4 -right-4 text-8xl text-white opacity-20"></i></div>
+                    <div id="wh-stat-profit-box" class="bg-card-blue text-white p-6 rounded-2xl shadow-lg relative overflow-hidden group"><p class="text-xs font-bold opacity-80 uppercase mb-1">Lợi nhuận hôm nay</p><h3 class="text-3xl font-extrabold mb-4" id="wh-stat-today">0</h3><i class="fas fa-chart-line absolute -bottom-4 -right-4 text-8xl text-white opacity-20"></i></div>
+                    <div class="bg-card-red text-white p-6 rounded-2xl shadow-lg relative overflow-hidden group"><p class="text-xs font-bold opacity-80 uppercase mb-1">Cảnh Báo Date</p><h3 class="text-3xl font-extrabold mb-4" id="wh-stat-alert">0 lô</h3><i class="fas fa-exclamation-triangle absolute -bottom-4 -right-4 text-8xl text-white opacity-20"></i></div>
+                </div>
+                <div class="grid grid-cols-3 gap-6 mb-8">
+                    <div onclick="app.nav('import-form')" class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition-all group"><div class="flex items-center gap-4 mb-3"><div class="w-12 h-12 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-xl group-hover:bg-green-600 group-hover:text-white transition-colors"><i class="fas fa-plus"></i></div><div><h2 class="text-lg font-bold text-gray-800">Nhập Kho</h2><p class="text-xs text-gray-400">Tạo phiếu nhập</p></div></div></div>
+                    <div onclick="app.nav('export-form')" class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition-all group"><div class="flex items-center gap-4 mb-3"><div class="w-12 h-12 rounded-full bg-yellow-100 text-yellow-600 flex items-center justify-center text-xl group-hover:bg-yellow-500 group-hover:text-white transition-colors"><i class="fas fa-sign-out-alt"></i></div><div><h2 class="text-lg font-bold text-gray-800">Xuất Kho</h2><p class="text-xs text-gray-400">Xuất bán FEFO</p></div></div></div>
+                    <div onclick="app.nav('check-form')" class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition-all group"><div class="flex items-center gap-4 mb-3"><div class="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl group-hover:bg-blue-500 group-hover:text-white transition-colors"><i class="fas fa-tasks"></i></div><div><h2 class="text-lg font-bold text-gray-800">Kiểm Kê</h2><p class="text-xs text-gray-400">Đối soát tồn kho</p></div></div></div>
+                </div>
+                <div class="bg-white rounded-2xl shadow-sm p-6"><h3 class="font-bold text-xl mb-4">Danh sách tồn kho</h3><table class="w-full text-left"><thead class="bg-gray-100 text-gray-600 text-sm"><tr><th class="p-3">Sản phẩm</th><th class="p-3 text-center">Tồn kho (Quy đổi)</th><th class="p-3 text-center">Trạng thái</th><th class="p-3 text-right">Chi tiết Giá</th><th class="p-3 text-right">Tổng Vốn Tồn</th></tr></thead><tbody id="wh-inventory-body"></tbody></table></div>
+            </div>
+
+            <div id="import-form" class="tab-content"><div class="text-sm text-gray-500 mb-4 cursor-pointer hover:underline" onclick="app.nav('warehouse')"> < Quay lại</div><h2 class="text-2xl font-bold text-green-700 mb-4">Nhập Kho (Đa Đơn Vị)</h2><div class="bg-white p-6 rounded-xl shadow-sm grid grid-cols-2 gap-4"><div><label class="font-bold text-sm">Sản phẩm</label><select id="imp-product" class="input-std mt-1" onchange="app.updateImportUnit()"></select></div><div><label class="font-bold text-sm">Nhà cung cấp</label><select id="imp-supplier" class="input-std mt-1"></select></div><div><label class="font-bold text-sm" id="lbl-imp-unit">Số lượng</label><input type="number" id="imp-qty" class="input-std mt-1" value="10"></div><div><label class="font-bold text-sm" id="lbl-imp-price">Giá nhập</label><input type="number" id="imp-price" class="input-std mt-1" placeholder="Nhập giá vốn"></div><div class="col-span-2"><label class="font-bold text-sm">Hạn sử dụng</label><input type="date" id="imp-exp" class="input-std mt-1"></div><div class="col-span-2"><button onclick="app.processImport()" class="btn-primary w-full">Lưu Phiếu Nhập & Quy Đổi</button></div></div></div>
+            
+            <div id="export-form" class="tab-content">
+                <div class="text-sm text-gray-500 mb-4 cursor-pointer hover:underline" onclick="app.nav('warehouse')"> < Quay lại</div>
+                <h2 class="text-2xl font-bold text-yellow-600 mb-4">Xuất Kho Thông Minh</h2>
+                <div class="grid grid-cols-12 gap-6">
+                    <div class="col-span-4 bg-white p-6 rounded-xl shadow-sm h-fit">
+                        <div class="mb-4"><label class="font-bold text-sm">1. Chọn Sản phẩm</label><select id="exp-product" class="input-std mt-1" onchange="app.loadBatchesForExport()"></select></div>
+                        
+                        <div class="mb-4">
+                            <label class="font-bold text-sm block mb-2">2. Loại khách hàng</label>
+                            <div class="flex gap-4">
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="export-strategy" value="standard" checked class="mr-2 accent-yellow-600" onchange="app.loadBatchesForExport()">
+                                    <span class="text-sm">Khách thường (Sắp hết hạn)</span>
+                                </label>
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="export-strategy" value="vip" class="mr-2 accent-green-600" onchange="app.loadBatchesForExport()">
+                                    <span class="text-sm font-bold text-green-700">Khách VIP (Date mới)</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                            <label class="font-bold text-sm text-yellow-800">3. Gợi ý tự động</label>
+                            <div class="flex gap-2 mt-1"><input type="number" id="exp-auto-qty" class="input-std text-center" placeholder="Nhập tổng SL"><button onclick="app.applyStrategy()" class="bg-yellow-500 text-white px-3 py-1 rounded font-bold hover:bg-yellow-600 text-sm whitespace-nowrap">Áp dụng</button></div>
+                            <p class="text-xs text-gray-500 mt-2 italic">Hệ thống sẽ tự điền số lượng vào các lô dựa trên tiêu chí khách hàng.</p>
+                        </div>
+                    </div>
+                    <div class="col-span-8 bg-white p-6 rounded-xl shadow-sm">
+                        <h3 class="font-bold text-gray-800 mb-3 flex justify-between"><span>4. Chi tiết các lô hàng phù hợp</span><span class="text-xs text-gray-400 font-normal">Nhập số lượng xuất vào từng lô</span></h3>
+                        <div class="overflow-x-auto border rounded-lg max-h-96 overflow-y-auto"><table class="w-full text-sm text-left"><thead class="bg-gray-100 text-gray-600 font-bold sticky top-0"><tr><th class="p-3">Mã Lô & HSD</th><th class="p-3 text-center">Tồn kho</th><th class="p-3">Nguồn gốc</th><th class="p-3 w-32 text-center bg-yellow-50 border-l border-yellow-100 text-yellow-800">SL Xuất</th></tr></thead><tbody id="batch-selection-body"><tr><td colspan="4" class="p-6 text-center text-gray-400 italic">Vui lòng chọn sản phẩm để xem danh sách lô.</td></tr></tbody></table></div><div class="mt-4 flex justify-between items-center pt-4 border-t"><div class="text-sm">Tổng xuất: <strong id="total-export-qty" class="text-xl text-yellow-600">0</strong></div><button onclick="app.addToExportList()" class="btn-primary bg-yellow-600 hover:bg-yellow-700">Thêm vào Giỏ Xuất Hàng</button></div>
+                    </div>
+                </div>
+                <div class="mt-8 bg-white p-6 rounded-xl shadow-sm"><h3 class="font-bold text-gray-800 mb-4 border-b pb-2">Danh sách chờ xuất kho</h3><table class="w-full text-sm"><thead class="text-xs text-gray-500 border-b"><tr><th class="pb-2 text-left">Sản phẩm & Nguồn</th><th class="pb-2 text-left">Lô chỉ định</th><th class="pb-2 text-left">SL</th><th class="pb-2 text-right">Hạn sử dụng</th></tr></thead><tbody id="exp-list-body"></tbody></table><div class="mt-4 pt-4 border-t flex justify-end"><button onclick="app.confirmExport()" class="btn-primary">Xác nhận Xuất Kho</button></div></div>
+            </div>
+
+            <div id="check-form" class="tab-content"><div class="flex justify-between items-center mb-4"><div class="flex items-center gap-2 text-gray-500 cursor-pointer hover:underline" onclick="app.nav('warehouse')"><i class="fas fa-arrow-left"></i> Quay lại</div><h2 class="text-2xl font-bold text-blue-600">Phiếu Kiểm Kê Kho</h2></div><div class="bg-white p-6 rounded-xl shadow-sm"><div class="mb-4 bg-blue-50 p-4 rounded-lg text-blue-800 text-sm border border-blue-100 flex items-start gap-3"><i class="fas fa-info-circle mt-1"></i><div><strong>Hướng dẫn:</strong> Nhập số lượng thực tế bạn đếm được vào ô "Thực tế". Hệ thống sẽ tự tính chênh lệch.<br>Sau khi hoàn tất, bấm <strong>"Cân bằng & Lưu kho"</strong> để cập nhật lại tồn kho theo số thực tế.</div></div><table class="w-full text-sm text-left border-collapse"><thead class="bg-gray-100 text-gray-600 font-bold uppercase text-xs"><tr><th class="p-3 border-b">Mã Lô</th><th class="p-3 border-b">Sản phẩm</th><th class="p-3 border-b">Hạn sử dụng</th><th class="p-3 border-b text-center">Tồn hệ thống</th><th class="p-3 border-b w-32">Thực tế</th><th class="p-3 border-b text-center">Chênh lệch</th></tr></thead><tbody id="check-list-body"></tbody></table><div class="mt-6 flex justify-end"><button onclick="app.saveCheck()" class="btn-primary flex items-center gap-2"><i class="fas fa-save"></i> Cân bằng & Lưu kho</button></div></div></div>
+            <div id="products" class="tab-content"><h2 class="text-2xl font-bold mb-4">Quản lý Sản phẩm</h2><div class="flex gap-6"><div class="w-1/3 bg-white p-6 rounded-2xl shadow-sm h-fit"><h3 class="font-bold text-lg mb-4 text-green-700">Danh mục</h3><ul id="cat-list"></ul></div><div class="w-2/3 bg-white p-6 rounded-2xl shadow-sm"><div class="bg-gray-50 p-4 rounded-lg mb-4 grid grid-cols-6 gap-3"><input type="text" id="new-prod-name" placeholder="Tên sản phẩm" class="input-std col-span-3"><select id="new-prod-cat" class="input-std col-span-2"></select><input type="number" id="new-prod-price" placeholder="Giá bán lẻ" class="input-std col-span-1"><input type="text" id="new-prod-dvnhap" placeholder="ĐV Nhập (Thùng)" class="input-std col-span-2 text-sm"><input type="text" id="new-prod-dvxuat" placeholder="ĐV Xuất (Hộp)" class="input-std col-span-2 text-sm"><input type="number" id="new-prod-tyle" placeholder="Tỷ lệ (12)" class="input-std col-span-2 text-sm"><input type="number" id="new-prod-min" placeholder="Tồn Min" class="input-std col-span-2 text-sm border-red-200 focus:ring-red-500"><input type="number" id="new-prod-max" placeholder="Tồn Max" class="input-std col-span-2 text-sm border-yellow-200 focus:ring-yellow-500"><button onclick="app.addProduct()" class="btn-primary col-span-2 text-sm">Thêm Mới</button></div><table class="w-full text-left text-sm"><thead class="bg-gray-100"><tr><th class="p-2">Tên SP & Quy đổi</th><th class="p-2 text-center">Định mức</th><th class="p-2 text-right">Giá bán lẻ</th><th class="p-2"></th></tr></thead><tbody id="prod-list"></tbody></table></div></div></div>
+            <div id="employees" class="tab-content"><div class="flex justify-between items-center mb-6"><h2 class="text-2xl font-bold">Quản lý Nhân sự</h2><button onclick="document.getElementById('add-staff-form').classList.toggle('hidden')" class="btn-primary"><i class="fas fa-plus mr-2"></i>Thêm nhân viên</button></div><div id="add-staff-form" class="hidden bg-white p-6 rounded-xl shadow-sm mb-6 border border-green-200"><div class="grid grid-cols-3 gap-4 mb-4"><input type="text" id="st-name" placeholder="Họ tên" class="input-std"><input type="text" id="st-role" placeholder="Chức vụ (VD: Kho)" class="input-std"><input type="text" id="st-phone" placeholder="SĐT" class="input-std"></div><div class="grid grid-cols-3 gap-4 mb-4 bg-gray-50 p-3 rounded"><input type="text" id="st-user" placeholder="Tên đăng nhập" class="input-std border-blue-300"><input type="text" id="st-pass" placeholder="Mật khẩu" class="input-std border-blue-300"><select id="st-role-opt" class="input-std border-blue-300"><option value="staff">Nhân viên (Hạn chế)</option><option value="admin">Quản trị viên (Full)</option></select></div><button onclick="app.addStaff()" class="btn-primary w-full">Lưu Nhân Viên</button></div><div class="grid grid-cols-3 gap-6" id="staff-list"></div></div>
+            <div id="suppliers" class="tab-content"><div class="flex justify-between items-center mb-6"><h2 class="text-2xl font-bold">Nhà Cung Cấp</h2><div class="flex gap-2"><input type="text" id="sup-name" placeholder="Tên NCC" class="input-std w-48"><input type="text" id="sup-contact" placeholder="SĐT/Liên hệ" class="input-std w-48"><button onclick="app.addSupplier()" class="btn-primary">Thêm</button></div></div><div class="bg-white rounded-2xl shadow-sm overflow-hidden"><table class="w-full text-left"><thead class="bg-yellow-50 text-yellow-800"><tr><th class="p-4">Tên Nhà Cung Cấp</th><th class="p-4">Thông tin liên hệ</th><th class="p-4 text-right">Hành động</th></tr></thead><tbody id="sup-list"></tbody></table></div></div>
+            <div id="reports" class="tab-content"><h2 class="text-2xl font-bold mb-6">Báo cáo & Thống kê</h2><div class="bg-white p-6 rounded-2xl shadow-sm mb-6"><div class="flex gap-4 items-end mb-6 border-b pb-6"><div><label class="block text-xs font-bold text-gray-500 mb-1">Từ ngày</label><input type="date" id="rpt-start" class="input-std"></div><div><label class="block text-xs font-bold text-gray-500 mb-1">Đến ngày</label><input type="date" id="rpt-end" class="input-std"></div><div><label class="block text-xs font-bold text-gray-500 mb-1">Loại GD</label><select id="rpt-type" class="input-std w-40"><option value="all">Tất cả</option><option value="import">Nhập kho</option><option value="export">Xuất kho</option><option value="check">Kiểm kê</option></select></div><button onclick="app.filterReport()" class="btn-primary h-10 px-6"><i class="fas fa-filter mr-2"></i> Lọc dữ liệu</button></div><div class="overflow-x-auto"><table class="w-full text-left text-sm"><thead class="bg-gray-100 text-gray-600 font-bold"><tr><th class="p-3 rounded-l-lg">Ngày tháng</th><th class="p-3">Loại GD</th><th class="p-3">Nội dung chi tiết</th><th class="p-3 text-right">Số lượng</th><th class="p-3 text-right rounded-r-lg">Lợi nhuận</th></tr></thead><tbody id="rpt-body"></tbody></table></div></div></div>
+        </main>
+    </div>
+
+    <script src="model2.js"></script>
+    <script src="view2.js"></script>
+    <script src="controller2.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            new MainController();
+        });
+    </script>
+</body>
+</html>
